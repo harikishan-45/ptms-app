@@ -1,16 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api"
-});
-
-// Automatically attach token
-api.interceptors.request.use((req) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
-  }
-  return req;
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true, // if you use cookies / auth
 });
 
 export default api;
