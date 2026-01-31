@@ -19,7 +19,13 @@ const permissionTestRoutes = require("./routes/permission.test.routes");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://ptms-frontend-tbg5.onrender.com/"
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 
 // Existing routes
