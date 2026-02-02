@@ -84,16 +84,6 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
-
-    // 7️⃣ 🔥 SET COOKIE (REQUIRED FOR RENDER + CORS)
-    // res.cookie("token", token, {
-    //   httpOnly: true,
-    //   secure: true,      // Render = HTTPS
-    //   sameSite: "none",  // Cross-origin
-    //   maxAge: 24 * 60 * 60 * 1000, // 1 day
-    // });
-
-    // 8️⃣ Response (NO token in body needed now)
     res.status(200).json({
       message: "Login successful",
       token,
