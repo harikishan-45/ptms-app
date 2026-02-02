@@ -20,6 +20,10 @@ const Login = () => {
         email,
         password
       });
+      console.log(res.data);
+//       const res = await api.post("/auth/login", formData);
+// console.log("LOGIN RESPONSE 👉", res.data);
+
 
       // 🔐 SAVE DATA
       localStorage.setItem("token", res.data.token);
