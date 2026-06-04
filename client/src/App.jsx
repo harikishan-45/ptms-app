@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Projects from "./pages/Projects";
@@ -15,6 +16,7 @@ import CreateTask from "./pages/CreateTask";
 import TaskDetail from "./pages/TaskDetail";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EditUser from "./pages/EditUser";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 
 const App = () => {
@@ -23,9 +25,17 @@ const App = () => {
       <Routes>
         {/* LOGIN */}
         <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         {/* DASHBOARD LAYOUT */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="home" element={<Dashboard />} />
           <Route path="users" element={<Users />} />
           <Route path="users/create" element={<CreateUser />} />

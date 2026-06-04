@@ -3,7 +3,6 @@
 // import api from "../api/axios";
 
 // const CreateUser = () => {
-//   const roleName = localStorage.getItem("roleName");
 //   const navigate = useNavigate();
 
 //   const [roles, setRoles] = useState([]);
@@ -112,9 +111,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const CreateUser = () => {
-  const roleName = localStorage.getItem("roleName");
+  const { user } = useAuth();
+  const roleName = user?.roleName;
   const navigate = useNavigate();
 
   const [roles, setRoles] = useState([]);

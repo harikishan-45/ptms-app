@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
-    const roleName = localStorage.getItem("roleName");
+    const { user } = useAuth();
+    const roleName = user?.roleName;
     const location = useLocation();
 
     const isActive = (path) =>

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const CreateProject = () => {
-  const roleName = localStorage.getItem("roleName");
+  const { user } = useAuth();
+  const roleName = user?.roleName;
   const navigate = useNavigate();
 
   const [name, setName] = useState("");

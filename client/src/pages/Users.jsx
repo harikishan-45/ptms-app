@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Users = () => {
-  const roleName = localStorage.getItem("roleName");
-
-  const permissions = JSON.parse(
-    localStorage.getItem("permissions") || "[]"
-  );
-  const loggedInUserId = localStorage.getItem("userId");
+  const { user } = useAuth();
+  const roleName = user?.roleName;
+  const permissions = user?.permissions || [];
+  const loggedInUserId = user?.id;
 
 
   const canUpdate = permissions.includes("user:update");

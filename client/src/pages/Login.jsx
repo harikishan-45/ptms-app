@@ -1,46 +1,33 @@
-import { useState } from "react";
-import api from "../api/axios";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { login, user, loading } = useAuth();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard/home", { replace: true });
+    }
+  }, [loading, navigate, user]);
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+
     try {
-      // const res = await api.post("/auth/login", { email, password });
-
-      // localStorage.setItem("token", res.data.token);
-      // localStorage.setItem("role", res.data.user.role);
-
-      // navigate("/dashboard");
-      const res = await api.post("/auth/login", {
-        email,
-        password
-      });
-      // 🔐 SAVE DATA
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("roleName", res.data.user.roleName);
-      localStorage.setItem(
-        "permissions",
-        JSON.stringify(res.data.user.permissions)
-      );
-      localStorage.setItem("userId", res.data.user.id);
-       
-      // 🚀 REDIRECT
+      await login({ email, password });
       navigate("/dashboard/home");
-    } catch (err) {
-      alert(err.response?.data?.message || "Login failed");
+    } catch (error) {
+      alert(error.response?.data?.message || "Login failed");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0b0f1a] px-4">
       <div className="w-full max-w-md bg-[#121826] border border-white/10 rounded-2xl p-8 shadow-lg">
-
-        {/* TITLE */}
         <h2 className="text-3xl font-bold text-white text-center mb-2">
           PTMS Login
         </h2>
@@ -48,13 +35,9 @@ const Login = () => {
           Project & Task Management System
         </p>
 
-        {/* FORM */}
         <form onSubmit={handleLogin} className="space-y-6">
-          {/* EMAIL */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Email
-            </label>
+            <label className="block text-sm text-gray-400 mb-1">Email</label>
             <input
               type="email"
               placeholder="you@example.com"
@@ -65,11 +48,8 @@ const Login = () => {
             />
           </div>
 
-          {/* PASSWORD */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Password
-            </label>
+            <label className="block text-sm text-gray-400 mb-1">Password</label>
             <input
               type="password"
               placeholder="••••••••"
@@ -80,7 +60,6 @@ const Login = () => {
             />
           </div>
 
-          {/* BUTTON */}
           <button
             type="submit"
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-semibold transition"
@@ -89,9 +68,15 @@ const Login = () => {
           </button>
         </form>
 
-        {/* FOOTER */}
         <p className="text-center text-gray-500 text-sm mt-6">
           Secure access for Admin & Managers
+        </p>
+
+        <p className="text-center text-gray-400 text-sm mt-3">
+          New here?{" "}
+          <Link to="/register" className="text-indigo-400 hover:text-indigo-300">
+            Create an account
+          </Link>
         </p>
       </div>
     </div>

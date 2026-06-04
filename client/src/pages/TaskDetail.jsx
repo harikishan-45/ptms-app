@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const TaskDetail = () => {
   const { id } = useParams();
-
-  const role = localStorage.getItem("roleName");
-  const permissions = JSON.parse(localStorage.getItem("permissions") || "[]");
+  const { user } = useAuth();
+  const role = user?.roleName;
+  const permissions = user?.permissions || [];
   const canAssign = permissions.includes("task:assign");
 
   const [task, setTask] = useState(null);

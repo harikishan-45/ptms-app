@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const roleName = localStorage.getItem("roleName");
+  const { user } = useAuth();
+  const roleName = user?.roleName;
 
   /* UNAUTHORIZED */
   if (roleName === "employee") {

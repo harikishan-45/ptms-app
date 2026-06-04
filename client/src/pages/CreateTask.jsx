@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const CreateTask = () => {
   const navigate = useNavigate();
-  const roleName = localStorage.getItem("roleName");
+  const { user } = useAuth();
+  const roleName = user?.roleName;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -45,13 +47,12 @@ const CreateTask = () => {
         const userRes = await api.get("/users");
         const allUsers = userRes.data.users || [];
 
-        const loggedInUserId = localStorage.getItem("userId");
-        // or from auth context if you have one
+        const loggedInUserId = user?.id;
 
         const filteredUsers = allUsers.filter(
           (u) =>
             u.role?.name !== "admin" &&        // ❌ exclude admin
-            u._id !== loggedInUserId            // ❌ exclude self
+            u._id !== loggedInUserId
         );
 
         setEmployees(filteredUsers);
@@ -62,7 +63,7 @@ const CreateTask = () => {
     };
 
     fetchData();
-  }, []);
+  }, [user?.id]);
 
 
   const handleSubmit = async (e) => {

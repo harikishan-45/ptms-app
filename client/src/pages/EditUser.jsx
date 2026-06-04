@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const EditUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const roleName = localStorage.getItem("roleName");
-  const loggedInUserId = localStorage.getItem("userId");
+  const { user } = useAuth();
+  const roleName = user?.roleName;
+  const loggedInUserId = user?.id;
 
   const [roles, setRoles] = useState([]);
   const [form, setForm] = useState({

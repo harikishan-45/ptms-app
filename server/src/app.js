@@ -10,25 +10,28 @@ const dashboardRoutes = require("./routes/dashboard.routes");
 const roleRoutes = require("./routes/role.routes");
 const userPermissionRoutes = require("./routes/user.permission.routes");
 const permissionRoutes = require("./routes/permission.routes");
-
-
-
-
-// 🔥 ADD THIS LINE
 const permissionTestRoutes = require("./routes/permission.test.routes");
 
 const app = express();
 
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://ptms-frontend-tbg5.onrender.com"
-  ]
-}));
+const allowedOrigins = (process.env.CORS_ORIGINS ||
+  process.env.CLIENT_URL ||
+  "http://localhost:5173,https://ptms-frontend-tbg5.onrender.com")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 
-// Existing routes
 app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/projects", projectRoutes);
@@ -38,9 +41,6 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/user-permissions", userPermissionRoutes);
 app.use("/api/permissions", permissionRoutes);
-
-
-// 🔥 PERMISSION TEST ROUTE (ADD HERE)
 app.use("/api/test-permission", permissionTestRoutes);
 
 app.get("/", (req, res) => {

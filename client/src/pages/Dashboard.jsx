@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const Dashboard = () => {
-  const roleName = localStorage.getItem("roleName");
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const roleName = user?.roleName;
 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
   };
 
@@ -71,7 +73,7 @@ const Dashboard = () => {
             <StatCard title="Total Users" value={stats.totalUsers} />
           )}
           {
-            roleName === "admin" && roleName === "manager" && (
+            (roleName === "admin" || roleName === "manager") && (
               <StatCard title="Total Projects" value={stats.totalProjects} />
             )
           }

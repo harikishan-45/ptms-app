@@ -1,0 +1,236 @@
+# ─────────────────────────────────────────────────────────────────
+# PTMS — GitHub Actions CI/CD Pipeline
+#
+# Flow:
+#   Push to main
+#     └─► test
+#           └─► build + push to ECR
+#                 └─► deploy (EC2 today, Kubernetes-ready tomorrow)
+# ─────────────────────────────────────────────────────────────────
+
+name: PTMS — CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]       # runs test job only on PRs (no deploy)
+
+# ── Shared variables available to every job ──────────────────────
+env:
+  AWS_REGION:      ap-south-1       # Mumbai — closest to Gurugram
+  SERVER_ECR_REPO: ptms-server
+  CLIENT_ECR_REPO: ptms-client
+
+# ─────────────────────────────────────────────────────────────────
+# JOB 1 — TEST
+# Runs on every push and every PR
+# ─────────────────────────────────────────────────────────────────
+jobs:
+  test:
+    name: 🧪 Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Server checks ───────────────────────────────────────────
+      - name: Setup Node (server)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server deps
+        run: npm ci
+        working-directory: server
+
+      # Add "test" script to server/package.json later; skipped for now
+      # - name: Run server tests
+      #   run: npm test
+      #   working-directory: server
+
+      # ── Client checks ───────────────────────────────────────────
+      - name: Setup Node (client)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client deps
+        run: npm ci
+        working-directory: client
+
+      - name: Lint client
+        run: npm run lint
+        working-directory: client
+
+      - name: Build client (smoke test)
+        run: npm run build
+        working-directory: client
+        env:
+          VITE_API_URL: http://localhost:5000   # dummy URL just for build check
+
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 2 — BUILD & PUSH TO ECR
+  # Runs only on push to main (not on PRs)
+  # ─────────────────────────────────────────────────────────────────
+  build-and-push:
+    name: 🐳 Build & Push Docker Images to ECR
+    runs-on: ubuntu-latest
+    needs: test                           # only runs if test passes
+    if: github.event_name == 'push'       # skip on pull_request events
+
+    outputs:
+      # Pass the exact image tag to the deploy job
+      image-tag: ${{ steps.meta.outputs.tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Image tag strategy ──────────────────────────────────────
+      # We use the short git SHA (e.g. a1b2c3d) as the image tag.
+      # This makes every image traceable back to an exact commit.
+      - name: Generate image tag
+        id: meta
+        run: echo "tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      # ── AWS auth ────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      # ── ECR login ───────────────────────────────────────────────
+      # aws-actions/amazon-ecr-login returns the registry URL
+      # which we use to prefix our image names
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Build & push SERVER ─────────────────────────────────────
+      - name: Build & push server image
+        env:
+          REGISTRY:  ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          docker build \
+            --tag $REGISTRY/$SERVER_ECR_REPO:$IMAGE_TAG \
+            --tag $REGISTRY/$SERVER_ECR_REPO:latest \
+            --file server/Dockerfile \
+            ./server
+
+          docker push $REGISTRY/$SERVER_ECR_REPO:$IMAGE_TAG
+          docker push $REGISTRY/$SERVER_ECR_REPO:latest
+
+          echo "✅ Server image pushed: $REGISTRY/$SERVER_ECR_REPO:$IMAGE_TAG"
+
+      # ── Build & push CLIENT ─────────────────────────────────────
+      - name: Build & push client image
+        env:
+          REGISTRY:  ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          docker build \
+            --tag $REGISTRY/$CLIENT_ECR_REPO:$IMAGE_TAG \
+            --tag $REGISTRY/$CLIENT_ECR_REPO:latest \
+            --build-arg VITE_API_URL=${{ secrets.VITE_API_URL }} \
+            --file client/Dockerfile \
+            ./client
+
+          docker push $REGISTRY/$CLIENT_ECR_REPO:$IMAGE_TAG
+          docker push $REGISTRY/$CLIENT_ECR_REPO:latest
+
+          echo "✅ Client image pushed: $REGISTRY/$CLIENT_ECR_REPO:$IMAGE_TAG"
+
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 3 — DEPLOY TO EC2
+  # SSH into EC2, pull latest images, restart containers
+  # ─────────────────────────────────────────────────────────────────
+  deploy-ec2:
+    name: 🚀 Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key:      ${{ secrets.EC2_SSH_KEY }}
+
+          # Everything inside `script` runs ON your EC2 machine
+          script: |
+            set -e    # stop on first error
+
+            echo "🔐 Logging into ECR..."
+            aws ecr get-login-password --region ap-south-1 | \
+              docker login \
+                --username AWS \
+                --password-stdin \
+                ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com
+
+            echo "📦 Pulling latest images..."
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/ptms-server:latest
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/ptms-client:latest
+
+            echo "🔄 Restarting containers..."
+            cd /home/ubuntu/ptms
+            docker compose down --remove-orphans
+            docker compose up -d
+
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+
+            echo "✅ Deployment complete!"
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 4 — KUBERNETES DEPLOY (placeholder — we'll fill this later)
+  # This job is commented out now. When you're ready for k8s,
+  # we uncomment this and comment out deploy-ec2 above.
+  # ─────────────────────────────────────────────────────────────────
+
+  # deploy-k8s:
+  #   name: ☸️ Deploy to Kubernetes (EKS)
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-push
+  #   if: github.event_name == 'push'
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region:            ap-south-1
+  #
+  #     - name: Update kubeconfig for EKS
+  #       run: aws eks update-kubeconfig --name ptms-cluster --region ap-south-1
+  #
+  #     - name: Update image tags in k8s manifests
+  #       run: |
+  #         IMAGE_TAG=${{ needs.build-and-push.outputs.image-tag }}
+  #         sed -i "s|ptms-server:.*|ptms-server:$IMAGE_TAG|g" k8s/server-deployment.yaml
+  #         sed -i "s|ptms-client:.*|ptms-client:$IMAGE_TAG|g" k8s/client-deployment.yaml
+  #
+  #     - name: Apply Kubernetes manifests
+  #       run: kubectl apply -f k8s/
+  #
+  #     - name: Wait for rollout
+  #       run: |
+  #         kubectl rollout status deployment/ptms-server -n ptms
+  #         kubectl rollout status deployment/ptms-client -n ptms
+ 
