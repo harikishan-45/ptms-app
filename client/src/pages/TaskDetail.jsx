@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
+import useAuth from "../context/useAuth";
 
 const TaskDetail = () => {
   const { id } = useParams();
@@ -123,11 +123,11 @@ const TaskDetail = () => {
       setShowBlockForm(false);
       setDependencyDescription("");
       alert(res.data.message);
-    } catch (err) {
-      alert("Failed to block task");
-    } finally {
-      setActionLoading(false);
-    }
+      } catch {
+        alert("Failed to block task");
+      } finally {
+        setActionLoading(false);
+      }
   };
 
   const handleUnblockTask = async () => {
@@ -136,7 +136,7 @@ const TaskDetail = () => {
       const res = await api.patch(`/tasks/${id}/unblock`);
       setTask(res.data.task);
       alert(res.data.message);
-    } catch (err) {
+    } catch {
       alert("Failed to unblock task");
     } finally {
       setActionLoading(false);

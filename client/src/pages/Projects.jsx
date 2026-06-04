@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import useAuth from "../context/useAuth";
 
 const Projects = () => {
   const [projects, setProjects] = useState([]);
@@ -10,18 +10,6 @@ const Projects = () => {
 
   const { user } = useAuth();
   const roleName = user?.roleName;
-
-  /* UNAUTHORIZED */
-  if (roleName === "employee") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0b0f1a]">
-        <div className="bg-[#121826] border border-red-500/30 text-red-400 px-6 py-4 rounded-xl">
-          You are not authorized to view projects.
-        </div>
-      </div>
-    );
-  }
-
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -37,6 +25,17 @@ const Projects = () => {
 
     fetchProjects();
   }, []);
+
+  /* UNAUTHORIZED */
+  if (roleName === "employee") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0f1a]">
+        <div className="bg-[#121826] border border-red-500/30 text-red-400 px-6 py-4 rounded-xl">
+          You are not authorized to view projects.
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import useAuth from "../context/useAuth";
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -22,15 +22,6 @@ const Tasks = () => {
       setError(err.response?.data?.message || "Failed to load tasks");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateStatus = async (taskId, status) => {
-    try {
-      await api.put(`/tasks/${taskId}/status`, { status });
-      fetchTasks();
-    } catch (err) {
-      alert(err.response?.data?.message || "Update failed");
     }
   };
 
@@ -75,12 +66,7 @@ const Tasks = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {tasks.map((task) => (
-            <TaskCard
-              key={task._id}
-              task={task}
-              role={roleName}
-              updateStatus={updateStatus}
-            />
+            <TaskCard key={task._id} task={task} />
           ))}
         </div>
       )}
@@ -89,7 +75,7 @@ const Tasks = () => {
 };
 
 /* TASK CARD */
-const TaskCard = ({ task, role, updateStatus }) => {
+const TaskCard = ({ task }) => {
   return (
     <div className="bg-[#121826] border border-white/10 rounded-xl p-6 hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10 transition">
       <Link to={`/dashboard/tasks/${task._id}`}>

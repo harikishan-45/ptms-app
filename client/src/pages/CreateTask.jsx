@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
+import useAuth from "../context/useAuth";
 
 const CreateTask = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const roleName = user?.roleName;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,8 +56,8 @@ const CreateTask = () => {
 
         setEmployees(filteredUsers);
 
-      } catch (err) {
-        console.error("Create task load error:", err);
+      } catch (error) {
+        console.error("Create task load error:", error);
       }
     };
 
