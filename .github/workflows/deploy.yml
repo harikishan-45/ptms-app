@@ -186,8 +186,8 @@ jobs:
 
             echo "🔄 Restarting containers..."
             cd /home/ec2-user/ptms
-            docker compose down
-            docker compose up -d
+            docker-compose down
+            docker-compose up -d
 
             echo "🧹 Cleaning up old images..."
             docker image prune -f
