@@ -186,7 +186,7 @@ jobs:
 
             echo "🔄 Restarting containers..."
             cd /home/ec2-user/ptms
-            docker compose down --remove-orphans
+            docker compose down
             docker compose up -d
 
             echo "🧹 Cleaning up old images..."
